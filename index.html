@@ -816,7 +816,8 @@ function updateLoop() {
         const targetY = ol.blockTarget.y;
         ol.y += Math.max(-0.45, Math.min(0.45, (targetY - ol.y) * 0.025));
       }
-      const lineX = yardToX(state.possession === 'home' ? state.ballYard : 100 - state.ballYard);\n      ol.x += (lineX - 5 * dir - ol.x) * 0.04;
+      const lineX = yardToX(state.possession === 'home' ? state.ballYard : 100 - state.ballYard);
+      ol.x += (lineX - 5 * dir - ol.x) * 0.04;
     });
 
     state.players.forEach((p, idx) => {
