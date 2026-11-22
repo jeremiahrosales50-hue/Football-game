@@ -170,7 +170,7 @@
 
     <div class="controls-help">
       <div>
-        <strong>Controls:</strong> <b>WASD / Arrows</b> Move | <b>Space</b> Snap / Action | <b>1 / 2 / 3</b> Pass to Receiver (WR1, WR2, TE)
+        <strong>Controls:</strong> <b>WASD / Arrows</b> Move | <b>Space</b> Snap / Action | <b>1 / 2 / 3</b> Pass (WR1, WR2, TE) | 5 OL block the rush
       </div>
       <div class="mobile-btns">
         <button class="ctrl-btn" onclick="throwPass(0)">Pass WR1</button>
@@ -246,6 +246,7 @@ let state = {
   bannerMsg: '',
   bannerTimer: 0,
   cpuSnapTimer: 0,
+  speedMultiplier: 0.6,
   players: [],
   ball: { x: 0, y: 0, inAir: false, targetIdx: -1, progress: 0, startX: 0, startY: 0, endX: 0, endY: 0 },
   keys: {}
@@ -546,6 +547,42 @@ function spawnPlayers() {
   defPositions.forEach(d => {
     state.players.push({ ...d, team: defTeam, isOff: false });
   });
+
+  // Five offensive linemen line up between the quarterback and the defense.
+  const olPositions = [
+    { role: 'LT', num: '72', y: 170 },
+    { role: 'LG', num: '66', y: 210 },
+    { role: 'C',  num: '55', y: 250 },
+    { role: 'RG', num: '67', y: 290 },
+    { role: 'RT', num: '74', y: 330 }
+  ];
+  olPositions.forEach((p, i) => {
+    state.players.push({
+      ...p,
+      x: losX - 5 * dir,
+      team: offTeam,
+      isOff: true,
+      isLineman: true,
+      speed: 0.7 + offTeam.off * 0.003,
+      blockTarget: null
+    });
+  });
+
+  // Add three more defensive linemen for a four-player defensive front.
+  [
+    { role: 'DL2', num: '90', y: 190 },
+    { role: 'DL3', num: '91', y: 250 },
+    { role: 'DL4', num: '95', y: 310 }
+  ].forEach((p, i) => {
+    state.players.push({
+      ...p,
+      x: losX + (18 + i * 2) * dir,
+      team: defTeam,
+      isOff: false,
+      isLineman: true,
+      speed: 1.25 + defTeam.def * 0.004
+    });
+  });
 }
 
 function snapBall() {
@@ -762,6 +799,26 @@ function updateLoop() {
       }
     }
 
+    // Offensive linemen stay near the line of scrimmage and engage rushers.
+    const offensiveLine = state.players.filter(p => p.isOff && p.isLineman);
+    const defensiveLine = state.players.filter(p => !p.isOff && p.role.startsWith('DL'));
+
+    offensiveLine.forEach((ol, i) => {
+      if (!ol.blockTarget || !defensiveLine.includes(ol.blockTarget)) {
+        ol.blockTarget = defensiveLine.reduce((best, defender) => {
+          const d = Math.hypot(defender.x - ol.x, defender.y - ol.y);
+          return !best || d < best.distance ? { player: defender, distance: d } : best;
+        }, null)?.player || null;
+      }
+
+      // Small lateral adjustments help the blockers stay in front of the rush.
+      if (ol.blockTarget) {
+        const targetY = ol.blockTarget.y;
+        ol.y += Math.max(-0.45, Math.min(0.45, (targetY - ol.y) * 0.025));
+      }
+      const lineX = yardToX(state.possession === 'home' ? state.ballYard : 100 - state.ballYard);\n      ol.x += (lineX - 5 * dir - ol.x) * 0.04;
+    });
+
     state.players.forEach((p, idx) => {
       if (p.isOff) return;
       if (isUserDefense() && idx === 6) {
@@ -770,11 +827,27 @@ function updateLoop() {
         if (state.keys['ArrowLeft'] || state.keys['a']) p.x -= p.speed * 1.1;
         if (state.keys['ArrowRight'] || state.keys['d']) p.x += p.speed * 1.1;
       } else {
-        const target = carrier || state.players[state.ball.targetIdx];
+        let target = carrier || state.players[state.ball.targetIdx];
+
+        // Defensive linemen fight through the offensive line before reaching the QB/RB.
+        if (p.role.startsWith('DL')) {
+          const blocker = offensiveLine.reduce((best, ol) => {
+            const d = Math.hypot(ol.x - p.x, ol.y - p.y);
+            return !best || d < best.distance ? { player: ol, distance: d } : best;
+          }, null);
+          if (blocker && blocker.distance < 42) {
+            target = blocker.player;
+            p.engaged = blocker.distance < 25;
+          } else {
+            p.engaged = false;
+          }
+        }
+
         if (target) {
           const angle = Math.atan2(target.y - p.y, target.x - p.x);
-          p.x += Math.cos(angle) * p.speed * 0.92;
-          p.y += Math.sin(angle) * p.speed * 0.92;
+          const rushSpeed = p.engaged ? p.speed * 0.18 : p.speed * 0.72;
+          p.x += Math.cos(angle) * rushSpeed;
+          p.y += Math.sin(angle) * rushSpeed;
         }
       }
 
@@ -857,6 +930,12 @@ function drawField() {
     ctx.textAlign = 'center';
     ctx.fillText(p.num, p.x, p.y + 4);
 
+    if (p.isLineman) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText(p.role, p.x, p.y - 17);
+    }
+
     if (state.phase === 'play' && isUserOffense() && state.players[0].hasBall && idx >= 2 && idx <= 4) {
       ctx.fillStyle = '#facc15';
       ctx.fillRect(p.x - 9, p.y - 28, 18, 14);
@@ -889,10 +968,19 @@ function drawField() {
   }
 }
 
+let simulationAccumulator = 0;
+
 function gameLoop() {
   if (!document.getElementById('screen-game').classList.contains('hidden')) {
-    updateLoop();
+    // Run the game simulation at 60% speed while still drawing every animation frame.
+    simulationAccumulator += state.speedMultiplier;
+    while (simulationAccumulator >= 1) {
+      updateLoop();
+      simulationAccumulator -= 1;
+    }
     drawField();
+  } else {
+    simulationAccumulator = 0;
   }
   requestAnimationFrame(gameLoop);
 }
