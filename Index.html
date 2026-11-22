@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Indiana High School Football — Madden 2D Edition</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  body { background: #0b1120; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+  header { width: 100%; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); border-bottom: 2px solid #eab308; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 1.35rem; letter-spacing: 1px; color: #facc15; text-transform: uppercase; }
+  header span { font-size: 0.85rem; color: #94a3b8; }
+
+  .container { width: 100%; max-width: 1150px; padding: 16px; }
+  .hidden { display: none !important; }
+
+  .top-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #334155; }
+  .toggle-group { display: flex; gap: 6px; background: #0f172a; padding: 4px; border-radius: 8px; }
+  .toggle-btn { background: transparent; color: #cbd5e1; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
+  .toggle-btn.active { background: #eab308; color: #0f172a; }
+  .btn-action { background: #22c55e; color: #052e16; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+  .btn-action:hover { background: #4ade80; transform: translateY(-1px); }
+  .btn-secondary { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  .btn-secondary:hover { background: #475569; }
+
+  .matchup-banner { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 16px; }
+  .team-preview { padding: 14px; border-radius: 10px; background: #0f172a; border: 2px solid #334155; }
+  .team-preview h3 { font-size: 1.2rem; margin-bottom: 4px; }
+  .team-preview .role-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; text-transform: uppercase; }
+  .role-you { background: #22c55e; color: #052e16; }
+  .role-cpu { background: #ef4444; color: #fff; }
+  .ratings-row { display: flex; gap: 10px; margin-top: 8px; font-size: 0.85rem; font-weight: 700; }
+  .rating-pill { background: #1e293b; padding: 4px 10px; border-radius: 6px; border: 1px solid #475569; }
+
+  .selectors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .team-column { background: #1e293b; border-radius: 10px; padding: 12px; border: 1px solid #334155; max-height: 430px; overflow-y: auto; }
+  .team-column h4 { margin-bottom: 10px; font-size: 0.95rem; color: #facc15; text-transform: uppercase; position: sticky; top: 0; background: #1e293b; padding: 4px 0; z-index: 2; }
+  .team-card { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 8px; background: #0f172a; border: 2px solid #334155; border-radius: 8px; cursor: pointer; transition: 0.15s; }
+  .team-card:hover { border-color: #94a3b8; }
+  .team-card.selected { border-color: #eab308; background: #1e293b; }
+  .swatch { width: 18px; height: 18px; border-radius: 50%; display: inline-block; margin-right: 8px; border: 2px solid #fff; vertical-align: middle; }
+
+  .bracket-box { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; }
+  .bracket-rounds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; text-align: left; }
+  .round-col { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+  .round-col h4 { color: #facc15; font-size: 0.85rem; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  .match-slot { background: #1e293b; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 0.8rem; border-left: 3px solid #eab308; }
+
+  .hud-bar { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 1.5fr; gap: 10px; background: #0f172a; border: 2px solid #eab308; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; align-items: center; }
+  .hud-team { display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: 1.05rem; padding: 4px 10px; border-radius: 6px; }
+  .hud-center { text-align: center; font-weight: 700; font-size: 0.9rem; color: #facc15; }
+  .hud-status { text-align: right; font-size: 0.85rem; color: #e2e8f0; }
+
+  .field-wrapper { position: relative; width: 100%; display: flex; justify-content: center; background: #064e3b; border-radius: 10px; overflow: hidden; border: 3px solid #334155; }
+  canvas { display: block; width: 100%; max-width: 1100px; height: auto; }
+
+  .playbook-panel { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .playbook-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .plays-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .play-card { background: #0f172a; border: 2px solid #334155; border-radius: 8px; padding: 8px; cursor: pointer; text-align: center; transition: 0.15s; }
+  .play-card:hover { border-color: #94a3b8; }
+  .play-card.active { border-color: #22c55e; background: #052e16; }
+  .play-card svg { width: 100%; height: 52px; background: #14532d; border-radius: 4px; margin-bottom: 5px; }
+  .play-card .play-name { font-size: 0.82rem; font-weight: 700; color: #f8fafc; }
+  .play-card .play-type { font-size: 0.7rem; color: #94a3b8; }
+
+  .controls-help { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.82rem; color: #cbd5e1; background: #0f172a; padding: 10px 14px; border-radius: 8px; }
+  .mobile-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ctrl-btn { background: #334155; color: #fff; border: 1px solid #64748b; padding: 8px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+  .ctrl-btn:active { background: #eab308; color: #000; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Indiana High School Football — 2D Madden Edition</h1>
+  <span>NIC Rivals | State Powerhouses | IHSAA State Bracket</span>
+</header>
+
+<div class="container">
+  <!-- SCREEN 1: TEAM SELECTION -->
+  <div id="screen-select">
+    <div class="top-controls">
+      <div>
+        <span style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:4px;">CONTROL SIDE</span>
+        <div class="toggle-group" id="side-toggles">
+          <button class="toggle-btn active" onclick="setControlSide('home')">Play as Home</button>
+          <button class="toggle-btn" onclick="setControlSide('away')">Play as Away</button>
+          <button class="toggle-btn" onclick="setControlSide('cpu')">CPU vs CPU</button>
+        </div>
+      </div>
+
+      <div>
+        <span style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:4px;">GAME MODE</span>
+        <div class="toggle-group" id="mode-toggles">
+          <button class="toggle-btn active" onclick="setGameMode('quick')">Quick Play</button>
+          <button class="toggle-btn" onclick="setGameMode('bracket')">IHSAA State Bracket</button>
+        </div>
+      </div>
+
+      <div>
+        <span style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:4px;">CONFERENCE FILTER</span>
+        <div class="toggle-group" id="filter-toggles">
+          <button class="toggle-btn active" onclick="setFilter('all')">All Teams</button>
+          <button class="toggle-btn" onclick="setFilter('nic')">Northern IN / NIC</button>
+          <button class="toggle-btn" onclick="setFilter('power')">State Powerhouses</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-secondary" onclick="swapTeams()">Swap Teams</button>
+        <button class="btn-action" onclick="startMatchOrBracket()">Kickoff</button>
+      </div>
+    </div>
+
+    <div class="matchup-banner">
+      <div class="team-preview" id="preview-home"></div>
+      <div style="font-weight:900;font-size:1.4rem;color:#eab308;">VS</div>
+      <div class="team-preview" id="preview-away"></div>
+    </div>
+
+    <div class="selectors-grid">
+      <div class="team-column">
+        <h4 id="home-col-title">Select Home Team (YOU)</h4>
+        <div id="home-list"></div>
+      </div>
+      <div class="team-column">
+        <h4 id="away-col-title">Select Away Team (CPU)</h4>
+        <div id="away-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: IHSAA TOURNAMENT BRACKET -->
+  <div id="screen-bracket" class="hidden">
+    <div class="bracket-box">
+      <h2 style="color:#facc15;">IHSAA State Championship Tournament</h2>
+      <p id="bracket-subtitle" style="color:#cbd5e1;margin-top:4px;">Road to Lucas Oil Stadium</p>
+      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn-secondary" onclick="backToMenu()">Change Team</button>
+        <button class="btn-action" id="btn-play-round" onclick="playNextBracketGame()">Play Round Game</button>
+      </div>
+      <div class="bracket-rounds" id="bracket-rounds"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: ACTIVE 2D FIELD -->
+  <div id="screen-game" class="hidden">
+    <div class="hud-bar">
+      <div class="hud-team" id="hud-away"></div>
+      <div class="hud-center" id="hud-clock">Q1 | 1:30</div>
+      <div class="hud-team" id="hud-home"></div>
+      <div class="hud-status" id="hud-down">1st & 10 | Ball on OWN 25</div>
+    </div>
+
+    <div class="field-wrapper">
+      <canvas id="fieldCanvas" width="1100" height="500"></canvas>
+    </div>
+
+    <div class="playbook-panel" id="playbook-panel">
+      <div class="playbook-header">
+        <strong id="playbook-title" style="color:#facc15;">OFFENSIVE PLAYBOOK — Select Play & Snap</strong>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="backToMenu()">Quit Game</button>
+          <button class="btn-action" id="btn-snap" onclick="snapBall()">SNAP BALL (Space)</button>
+        </div>
+      </div>
+      <div class="plays-grid" id="plays-grid"></div>
+    </div>
+
+    <div class="controls-help">
+      <div>
+        <strong>Controls:</strong> <b>WASD / Arrows</b> Move | <b>Space</b> Snap / Action | <b>1 / 2 / 3</b> Pass to Receiver (WR1, WR2, TE)
+      </div>
+      <div class="mobile-btns">
+        <button class="ctrl-btn" onclick="throwPass(0)">Pass WR1</button>
+        <button class="ctrl-btn" onclick="throwPass(1)">Pass WR2</button>
+        <button class="ctrl-btn" onclick="throwPass(2)">Pass TE</button>
+        <button class="ctrl-btn" onclick="snapBall()">Snap / Action</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEAMS = [
+  { id: 'penn', name: 'Penn Kingsmen', short: 'PENN', city: 'Mishawaka', conf: 'nic', ovr: 90, off: 91, def: 89, c1: '#111111', c2: '#eab308' },
+  { id: 'riley', name: 'South Bend Riley Wildcats', short: 'RILEY', city: 'South Bend', conf: 'nic', ovr: 79, off: 80, def: 78, c1: '#1d4ed8', c2: '#facc15' },
+  { id: 'adams', name: 'South Bend John Adams Eagles', short: 'ADAMS', city: 'South Bend', conf: 'nic', ovr: 81, off: 82, def: 80, c1: '#dc2626', c2: '#1e3a8a' },
+  { id: 'mishawaka', name: 'Mishawaka Cavemen', short: 'MISH', city: 'Mishawaka', conf: 'nic', ovr: 87, off: 88, def: 86, c1: '#7f1d1d', c2: '#ffffff' },
+  { id: 'marian', name: 'Mishawaka Marian Knights', short: 'MARIAN', city: 'Mishawaka', conf: 'nic', ovr: 84, off: 85, def: 83, c1: '#1e3a8a', c2: '#94a3b8' },
+  { id: 'stjoe', name: 'South Bend St. Joseph Huskies', short: 'ST JOE', city: 'South Bend', conf: 'nic', ovr: 85, off: 84, def: 86, c1: '#1e40af', c2: '#ffffff' },
+  { id: 'elkhart', name: 'Elkhart Lions', short: 'ELK', city: 'Elkhart', conf: 'nic', ovr: 86, off: 87, def: 85, c1: '#1d4ed8', c2: '#eab308' },
+  { id: 'wash', name: 'South Bend Washington Panthers', short: 'WASH', city: 'South Bend', conf: 'nic', ovr: 77, off: 79, def: 75, c1: '#15803d', c2: '#ffffff' },
+  { id: 'newprairie', name: 'New Prairie Cougars', short: 'NP', city: 'New Carlisle', conf: 'nic', ovr: 85, off: 86, def: 84, c1: '#172554', c2: '#ca8a04' },
+  { id: 'warsaw', name: 'Warsaw Tigers', short: 'WARSAW', city: 'Warsaw', conf: 'nic', ovr: 88, off: 89, def: 87, c1: '#ea580c', c2: '#111111' },
+  { id: 'concord', name: 'Concord Minutemen', short: 'CONC', city: 'Elkhart', conf: 'nic', ovr: 84, off: 85, def: 83, c1: '#166534', c2: '#ffffff' },
+  { id: 'northwood', name: 'NorthWood Panthers', short: 'NW', city: 'Nappanee', conf: 'nic', ovr: 85, off: 86, def: 84, c1: '#b91c1c', c2: '#111111' },
+  { id: 'valpo', name: 'Valparaiso Vikings', short: 'VALPO', city: 'Valparaiso', conf: 'nic', ovr: 89, off: 88, def: 90, c1: '#14532d', c2: '#ffffff' },
+  { id: 'brownsburg', name: 'Brownsburg Bulldogs', short: 'BBURG', city: 'Brownsburg', conf: 'power', ovr: 96, off: 96, def: 95, c1: '#581c87', c2: '#ffffff' },
+  { id: 'centergrove', name: 'Center Grove Trojans', short: 'CG', city: 'Greenwood', conf: 'power', ovr: 95, off: 94, def: 96, c1: '#991b1b', c2: '#ffffff' },
+  { id: 'carmel', name: 'Carmel Greyhounds', short: 'CARMEL', city: 'Carmel', conf: 'power', ovr: 93, off: 92, def: 94, c1: '#1e3a8a', c2: '#eab308' },
+  { id: 'warren', name: 'Warren Central Warriors', short: 'WARREN', city: 'Indianapolis', conf: 'power', ovr: 94, off: 93, def: 95, c1: '#111111', c2: '#eab308' },
+  { id: 'bendavis', name: 'Ben Davis Giants', short: 'BD', city: 'Indianapolis', conf: 'power', ovr: 93, off: 94, def: 92, c1: '#581c87', c2: '#ffffff' },
+  { id: 'cathedral', name: 'Indianapolis Cathedral Irish', short: 'CATH', city: 'Indianapolis', conf: 'power', ovr: 92, off: 92, def: 92, c1: '#1e3a8a', c2: '#eab308' },
+  { id: 'westfield', name: 'Westfield Shamrocks', short: 'WEST', city: 'Westfield', conf: 'power', ovr: 94, off: 95, def: 93, c1: '#15803d', c2: '#eab308' },
+  { id: 'hse', name: 'Hamilton Southeastern Royals', short: 'HSE', city: 'Fishers', conf: 'power', ovr: 91, off: 90, def: 92, c1: '#1d4ed8', c2: '#ffffff' },
+  { id: 'crownpoint', name: 'Crown Point Bulldogs', short: 'CP', city: 'Crown Point', conf: 'power', ovr: 92, off: 91, def: 93, c1: '#dc2626', c2: '#ffffff' },
+  { id: 'luers', name: 'FW Bishop Luers Knights', short: 'LUERS', city: 'Fort Wayne', conf: 'power', ovr: 89, off: 90, def: 88, c1: '#dc2626', c2: '#111111' }
+];
+
+const OFF_PLAYS = [
+  { id: 'run_in', name: 'Inside Zone Run', type: 'RUN', desc: 'Hand off up the middle', svg: '<line x1="20" y1="26" x2="85" y2="26" stroke="#facc15" stroke-width="3"/><polygon points="85,22 93,26 85,30" fill="#facc15"/>' },
+  { id: 'run_out', name: 'Outside Toss Sweep', type: 'RUN', desc: 'Pitch to RB around edge', svg: '<path d="M20,26 Q50,6 90,10" fill="none" stroke="#facc15" stroke-width="3"/>' },
+  { id: 'pass_slant', name: 'Quick Slants', type: 'PASS', desc: 'Fast inside cuts', svg: '<path d="M30,10 L55,22 M30,42 L55,30 M30,26 L75,26" stroke="#38bdf8" stroke-width="2.5"/>' },
+  { id: 'pass_post', name: 'Deep Post', type: 'PASS', desc: 'Attack deep middle', svg: '<path d="M30,10 L65,10 L92,24 M30,42 L85,42" fill="none" stroke="#38bdf8" stroke-width="2.5"/>' },
+  { id: 'pass_screen', name: 'HB Screen', type: 'PASS', desc: 'Dump off to RB in flat', svg: '<path d="M20,26 L35,42 L85,42" fill="none" stroke="#38bdf8" stroke-width="2.5"/>' },
+  { id: 'fg', name: 'Field Goal', type: 'SPECIAL', desc: 'Kick 3 pts (within 45 yds)', svg: '<text x="50" y="32" fill="#facc15" font-size="14" text-anchor="middle" font-weight="bold">FG KICK</text>' },
+  { id: 'punt', name: 'Punt', type: 'SPECIAL', desc: 'Flip field position', svg: '<text x="50" y="32" fill="#cbd5e1" font-size="14" text-anchor="middle" font-weight="bold">PUNT</text>' }
+];
+
+const DEF_PLAYS = [
+  { id: 'blitz', name: 'Engage Eight Blitz', type: 'BLITZ', desc: 'Heavy pass rush pressure', svg: '<line x1="80" y1="12" x2="35" y2="26" stroke="#f87171" stroke-width="2.5"/><line x1="80" y1="40" x2="35" y2="26" stroke="#f87171" stroke-width="2.5"/>' },
+  { id: 'cover2', name: 'Cover 2 Zone', type: 'ZONE', desc: 'Two deep safeties', svg: '<circle cx="85" cy="14" r="8" fill="none" stroke="#60a5fa" stroke-width="2"/><circle cx="85" cy="38" r="8" fill="none" stroke="#60a5fa" stroke-width="2"/>' },
+  { id: 'man', name: 'Man-to-Man Press', type: 'MAN', desc: 'Tight coverage on WRs', svg: '<line x1="65" y1="12" x2="40" y2="12" stroke="#34d399" stroke-width="2.5"/><line x1="65" y1="40" x2="40" y2="40" stroke="#34d399" stroke-width="2.5"/>' },
+  { id: 'prevent', name: 'Prevent Defense', type: 'DEEP', desc: 'Stop deep bombs late', svg: '<path d="M88,8 L88,44" stroke="#a78bfa" stroke-width="4" stroke-dasharray="4"/>' }
+];
+
+let state = {
+  controlSide: 'home',
+  gameMode: 'quick',
+  filter: 'all',
+  homeTeam: TEAMS[0],
+  awayTeam: TEAMS[1],
+  bracket: null,
+  quarter: 1,
+  clock: 90,
+  homeScore: 0,
+  awayScore: 0,
+  possession: 'home',
+  ballYard: 25,
+  down: 1,
+  toGo: 10,
+  phase: 'presnap',
+  selectedPlay: OFF_PLAYS[0],
+  bannerMsg: '',
+  bannerTimer: 0,
+  cpuSnapTimer: 0,
+  players: [],
+  ball: { x: 0, y: 0, inAir: false, targetIdx: -1, progress: 0, startX: 0, startY: 0, endX: 0, endY: 0 },
+  keys: {}
+};
+
+const canvas = document.getElementById('fieldCanvas');
+const ctx = canvas.getContext('2d');
+
+function renderTeamSelection() {
+  const homeTitle = document.getElementById('home-col-title');
+  const awayTitle = document.getElementById('away-col-title');
+  homeTitle.textContent = state.controlSide === 'home' ? 'Select Home Team (YOU)' : 'Select Home Team (CPU)';
+  awayTitle.textContent = state.controlSide === 'away' ? 'Select Away Team (YOU)' : 'Select Away Team (CPU)';
+
+  renderPreview('preview-home', state.homeTeam, 'HOME', state.controlSide === 'home');
+  renderPreview('preview-away', state.awayTeam, 'AWAY', state.controlSide === 'away');
+
+  const filtered = TEAMS.filter(t => state.filter === 'all' || t.conf === state.filter);
+  renderList('home-list', filtered, state.homeTeam.id, (t) => { state.homeTeam = t; renderTeamSelection(); });
+  renderList('away-list', filtered, state.awayTeam.id, (t) => { state.awayTeam = t; renderTeamSelection(); });
+}
+
+function renderPreview(elId, team, sideLabel, isUser) {
+  const el = document.getElementById(elId);
+  const roleBadge = state.controlSide === 'cpu'
+    ? '<span class="role-tag role-cpu">CPU SPECTATE</span>'
+    : (isUser ? '<span class="role-tag role-you">YOU CONTROL</span>' : '<span class="role-tag role-cpu">CPU OPPONENT</span>');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.75rem;color:#94a3b8;font-weight:700;">${sideLabel} TEAM</span>
+      ${roleBadge}
+    </div>
+    <h3><span class="swatch" style="background:${team.c1};border-color:${team.c2}"></span>${team.name}</h3>
+    <div style="font-size:0.8rem;color:#94a3b8;">${team.city}, IN</div>
+    <div class="ratings-row">
+      <span class="rating-pill" style="color:#facc15;">OVR ${team.ovr}</span>
+      <span class="rating-pill">OFF ${team.off}</span>
+      <span class="rating-pill">DEF ${team.def}</span>
+    </div>
+  `;
+}
+
+function renderList(elId, teams, selectedId, onPick) {
+  const container = document.getElementById(elId);
+  container.innerHTML = '';
+  teams.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'team-card' + (t.id === selectedId ? ' selected' : '');
+    div.innerHTML = `
+      <div>
+        <span class="swatch" style="background:${t.c1};border-color:${t.c2}"></span>
+        <strong>${t.name}</strong>
+        <span style="font-size:0.75rem;color:#94a3b8;display:block;margin-left:26px;">${t.city}</span>
+      </div>
+      <div style="text-align:right;">
+        <span style="background:#eab308;color:#000;font-weight:800;padding:2px 7px;border-radius:5px;font-size:0.8rem;">${t.ovr} OVR</span>
+        <span style="font-size:0.7rem;color:#94a3b8;display:block;margin-top:2px;">OFF ${t.off} | DEF ${t.def}</span>
+      </div>
+    `;
+    div.onclick = () => onPick(t);
+    container.appendChild(div);
+  });
+}
+
+function setControlSide(side) {
+  state.controlSide = side;
+  document.querySelectorAll('#side-toggles .toggle-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i===0 && side==='home') || (i===1 && side==='away') || (i===2 && side==='cpu'));
+  });
+  renderTeamSelection();
+}
+
+function setGameMode(mode) {
+  state.gameMode = mode;
+  document.querySelectorAll('#mode-toggles .toggle-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i===0 && mode==='quick') || (i===1 && mode==='bracket'));
+  });
+}
+
+function setFilter(f) {
+  state.filter = f;
+  document.querySelectorAll('#filter-toggles .toggle-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i===0 && f==='all') || (i===1 && f==='nic') || (i===2 && f==='power'));
+  });
+  renderTeamSelection();
+}
+
+function swapTeams() {
+  const temp = state.homeTeam;
+  state.homeTeam = state.awayTeam;
+  state.awayTeam = temp;
+  renderTeamSelection();
+}
+
+function showScreen(id) {
+  ['screen-select', 'screen-bracket', 'screen-game'].forEach(s => {
+    document.getElementById(s).classList.toggle('hidden', s !== id);
+  });
+}
+
+function backToMenu() {
+  state.phase = 'gameover';
+  showScreen('screen-select');
+}
+
+function startMatchOrBracket() {
+  if (state.gameMode === 'bracket') {
+    initBracket();
+    showScreen('screen-bracket');
+  } else {
+    launchGame(state.homeTeam, state.awayTeam);
+  }
+}
+
+function initBracket() {
+  const userTeam = state.controlSide === 'away' ? state.awayTeam : state.homeTeam;
+  const pool = TEAMS.filter(t => t.id !== userTeam.id).sort(() => Math.random() - 0.5).slice(0, 7);
+  const seeds = [userTeam, ...pool];
+  state.bracket = {
+    round: 0,
+    roundNames: ['Sectional', 'Regional', 'Semi-State', 'IHSAA State Championship (Lucas Oil)'],
+    matches: [
+      [ { t1: seeds[0], t2: seeds[1], w: null }, { t1: seeds[2], t2: seeds[3], w: null }, { t1: seeds[4], t2: seeds[5], w: null }, { t1: seeds[6], t2: seeds[7], w: null } ],
+      [], [], []
+    ]
+  };
+  renderBracket();
+}
+
+function renderBracket() {
+  const container = document.getElementById('bracket-rounds');
+  container.innerHTML = '';
+  state.bracket.roundNames.forEach((rName, rIdx) => {
+    const col = document.createElement('div');
+    col.className = 'round-col';
+    col.innerHTML = `<h4>${rName}</h4>`;
+    const list = state.bracket.matches[rIdx];
+    if (!list || list.length === 0) {
+      col.innerHTML += `<div style="color:#64748b;font-size:0.8rem;">TBD</div>`;
+    } else {
+      list.forEach(m => {
+        col.innerHTML += `
+          <div class="match-slot">
+            <div style="font-weight:${m.w===m.t1?'800':'500'};color:${m.w===m.t1?'#22c55e':'#f8fafc'}">${m.t1.short} (${m.t1.ovr})</div>
+            <div style="font-weight:${m.w===m.t2?'800':'500'};color:${m.w===m.t2?'#22c55e':'#f8fafc'}">${m.t2.short} (${m.t2.ovr})</div>
+          </div>
+        `;
+      });
+    }
+    container.appendChild(col);
+  });
+}
+
+function playNextBracketGame() {
+  const r = state.bracket.round;
+  const userMatch = state.bracket.matches[r][0];
+  if (state.controlSide === 'away') {
+    launchGame(userMatch.t2, userMatch.t1);
+  } else {
+    launchGame(userMatch.t1, userMatch.t2);
+  }
+}
+
+function advanceBracket(winnerTeam) {
+  const r = state.bracket.round;
+  const userTeam = state.controlSide === 'away' ? state.awayTeam : state.homeTeam;
+  const currentMatches = state.bracket.matches[r];
+  currentMatches[0].w = winnerTeam;
+
+  if (winnerTeam.id !== userTeam.id) {
+    alert(`Eliminated in the ${state.bracket.roundNames[r]}! ${winnerTeam.name} advances.`);
+    backToMenu();
+    return;
+  }
+
+  for (let i = 1; i < currentMatches.length; i++) {
+    const m = currentMatches[i];
+    m.w = (m.t1.ovr + Math.random()*10 >= m.t2.ovr + Math.random()*10) ? m.t1 : m.t2;
+  }
+
+  if (r === 3) {
+    alert(`CONGRATULATIONS! ${userTeam.name} are the IHSAA STATE CHAMPIONS at Lucas Oil Stadium!`);
+    backToMenu();
+    return;
+  }
+
+  const nextRound = [];
+  for (let i = 0; i < currentMatches.length; i += 2) {
+    nextRound.push({ t1: currentMatches[i].w, t2: currentMatches[i+1].w, w: null });
+  }
+  state.bracket.round++;
+  state.bracket.matches[state.bracket.round] = nextRound;
+  showScreen('screen-bracket');
+  renderBracket();
+}
+
+function launchGame(home, away) {
+  state.homeTeam = home;
+  state.awayTeam = away;
+  state.quarter = 1;
+  state.clock = 90;
+  state.homeScore = 0;
+  state.awayScore = 0;
+  state.possession = 'home';
+  state.ballYard = 25;
+  state.down = 1;
+  state.toGo = 10;
+  showScreen('screen-game');
+  setupPreSnap();
+}
+
+function isUserOffense() {
+  return state.controlSide === state.possession;
+}
+
+function isUserDefense() {
+  return state.controlSide !== 'cpu' && state.controlSide !== state.possession;
+}
+
+function setupPreSnap() {
+  state.phase = 'presnap';
+  state.ball.inAir = false;
+  updateHUD();
+
+  const panel = document.getElementById('playbook-panel');
+  const title = document.getElementById('playbook-title');
+  const grid = document.getElementById('plays-grid');
+  const snapBtn = document.getElementById('btn-snap');
+
+  if (isUserOffense()) {
+    panel.style.opacity = '1';
+    title.textContent = `OFFENSIVE PLAYBOOK (${state[state.possession+'Team'].name}) — Pick Play & Snap`;
+    snapBtn.disabled = false;
+    state.selectedPlay = OFF_PLAYS[0];
+    renderPlayCards(OFF_PLAYS);
+    state.cpuSnapTimer = 0;
+  } else if (isUserDefense()) {
+    panel.style.opacity = '1';
+    title.textContent = `DEFENSIVE PLAYBOOK (${state[state.controlSide+'Team'].name}) — Pick Defense (CPU Offense Auto-Snaps)`;
+    snapBtn.disabled = false;
+    state.selectedPlay = DEF_PLAYS[0];
+    renderPlayCards(DEF_PLAYS);
+    state.cpuSnapTimer = 180;
+  } else {
+    title.textContent = `CPU vs CPU SPECTATE — Auto-Calling Plays...`;
+    grid.innerHTML = '';
+    state.selectedPlay = OFF_PLAYS[Math.floor(Math.random()*5)];
+    state.cpuSnapTimer = 90;
+  }
+  spawnPlayers();
+}
+
+function renderPlayCards(list) {
+  const grid = document.getElementById('plays-grid');
+  grid.innerHTML = '';
+  list.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'play-card' + (state.selectedPlay.id === p.id ? ' active' : '');
+    card.innerHTML = `
+      <svg viewBox="0 0 100 52">${p.svg}</svg>
+      <div class="play-name">${p.name}</div>
+      <div class="play-type">${p.desc}</div>
+    `;
+    card.onclick = () => {
+      state.selectedPlay = p;
+      document.querySelectorAll('.play-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+    };
+    grid.appendChild(card);
+  });
+}
+
+function yardToX(yard) {
+  return 100 + yard * 9;
+}
+
+function spawnPlayers() {
+  state.players = [];
+  const offTeam = state.possession === 'home' ? state.homeTeam : state.awayTeam;
+  const defTeam = state.possession === 'home' ? state.awayTeam : state.homeTeam;
+  const dir = state.possession === 'home' ? 1 : -1;
+  const fieldYard = state.possession === 'home' ? state.ballYard : (100 - state.ballYard);
+  const losX = yardToX(fieldYard);
+
+  state.players.push({ role: 'QB', num: '12', x: losX - 32 * dir, y: 250, team: offTeam, isOff: true, speed: 2.3 + offTeam.off*0.01, hasBall: true });
+  state.players.push({ role: 'RB', num: '28', x: losX - 52 * dir, y: 280, team: offTeam, isOff: true, speed: 2.7 + offTeam.off*0.012, hasBall: false });
+  state.players.push({ role: 'WR1', num: '81', x: losX - 8 * dir, y: 75, team: offTeam, isOff: true, speed: 2.85 + offTeam.off*0.012, routeIdx: 0 });
+  state.players.push({ role: 'WR2', num: '11', x: losX - 8 * dir, y: 425, team: offTeam, isOff: true, speed: 2.8 + offTeam.off*0.012, routeIdx: 1 });
+  state.players.push({ role: 'TE', num: '88', x: losX - 8 * dir, y: 310, team: offTeam, isOff: true, speed: 2.5 + offTeam.off*0.01, routeIdx: 2 });
+
+  const defPositions = [
+    { role: 'DL', num: '99', x: losX + 18 * dir, y: 230, speed: 2.2 + defTeam.def*0.01 },
+    { role: 'LB', num: '54', x: losX + 45 * dir, y: 270, speed: 2.5 + defTeam.def*0.011 },
+    { role: 'CB1', num: '21', x: losX + 55 * dir, y: 80, speed: 2.75 + defTeam.def*0.011 },
+    { role: 'CB2', num: '24', x: losX + 55 * dir, y: 420, speed: 2.75 + defTeam.def*0.011 },
+    { role: 'FS', num: '32', x: losX + 120 * dir, y: 250, speed: 2.7 + defTeam.def*0.011 }
+  ];
+  defPositions.forEach(d => {
+    state.players.push({ ...d, team: defTeam, isOff: false });
+  });
+}
+
+function snapBall() {
+  if (state.phase !== 'presnap') return;
+
+  if (isUserOffense() && state.selectedPlay.id === 'fg') {
+    const dist = (100 - state.ballYard) + 17;
+    const makeChance = Math.max(0.15, 1.05 - dist * 0.015);
+    if (Math.random() < makeChance) {
+      addScore(3, `FIELD GOAL GOOD FROM ${dist} YARDS!`);
+    } else {
+      triggerBanner(`MISSED ${dist}-YD FIELD GOAL!`);
+      switchPossession(state.ballYard);
+    }
+    return;
+  }
+  if (isUserOffense() && state.selectedPlay.id === 'punt') {
+    const puntYds = 38 + Math.floor(Math.random() * 14);
+    const newYard = Math.min(80, Math.max(20, 100 - (state.ballYard + puntYds)));
+    triggerBanner(`PUNTED ${puntYds} YARDS!`);
+    switchPossession(newYard);
+    return;
+  }
+
+  if (!isUserOffense()) {
+    if (state.down === 4 && state.ballYard >= 68) {
+      addScore(3, `${state[state.possession+'Team'].short} MAKES FIELD GOAL!`);
+      return;
+    } else if (state.down === 4) {
+      triggerBanner(`${state[state.possession+'Team'].short} PUNTS!`);
+      switchPossession(25);
+      return;
+    }
+    state.selectedPlay = OFF_PLAYS[Math.floor(Math.random() * 5)];
+  }
+
+  state.phase = 'play';
+  if (state.selectedPlay.type === 'RUN') {
+    state.players[0].hasBall = false;
+    state.players[1].hasBall = true;
+  }
+}
+
+function throwPass(recIdx) {
+  if (state.phase !== 'play' || !isUserOffense()) return;
+  const qb = state.players[0];
+  if (!qb.hasBall || state.ball.inAir) return;
+  const target = state.players[2 + recIdx];
+  qb.hasBall = false;
+  state.ball = {
+    inAir: true, targetIdx: 2 + recIdx, progress: 0,
+    startX: qb.x, startY: qb.y, endX: target.x + (state.possession==='home'?40:-40), endY: target.y
+  };
+}
+
+function addScore(pts, msg) {
+  if (state.possession === 'home') state.homeScore += pts;
+  else state.awayScore += pts;
+  triggerBanner(msg);
+  switchPossession(25);
+}
+
+function switchPossession(startYard) {
+  state.possession = state.possession === 'home' ? 'away' : 'home';
+  state.ballYard = startYard;
+  state.down = 1;
+  state.toGo = 10;
+  setupPreSnap();
+}
+
+function triggerBanner(msg) {
+  state.bannerMsg = msg;
+  state.bannerTimer = 110;
+}
+
+function updateHUD() {
+  const h = state.homeTeam, a = state.awayTeam;
+  document.getElementById('hud-away').innerHTML = `<span>${a.short} ${state.possession==='away'?'[BALL]':''}</span><span>${state.awayScore}</span>`;
+  document.getElementById('hud-away').style.background = a.c1;
+  document.getElementById('hud-home').innerHTML = `<span>${h.short} ${state.possession==='home'?'[BALL]':''}</span><span>${state.homeScore}</span>`;
+  document.getElementById('hud-home').style.background = h.c1;
+
+  const mins = Math.floor(state.clock / 60);
+  const secs = String(Math.floor(state.clock % 60)).padStart(2, '0');
+  document.getElementById('hud-clock').textContent = `Q${state.quarter} | ${mins}:${secs}`;
+
+  const downNames = ['1st', '2nd', '3rd', '4th'];
+  const sideText = state.ballYard <= 50 ? `OWN ${state.ballYard}` : `OPP ${100 - state.ballYard}`;
+  document.getElementById('hud-down').textContent = `${downNames[state.down-1]} & ${state.toGo} | Ball on ${sideText}`;
+}
+
+function endPlayAtX(x) {
+  const fieldYard = Math.round((x - 100) / 9);
+  const newOffYard = state.possession === 'home' ? fieldYard : (100 - fieldYard);
+
+  if (newOffYard >= 100) {
+    addScore(7, `TOUCHDOWN ${state[state.possession+'Team'].name.toUpperCase()}!`);
+    return;
+  }
+  if (newOffYard <= 0) {
+    triggerBanner('SAFETY! +2 PTS DEFENSE');
+    if (state.possession === 'home') state.awayScore += 2; else state.homeScore += 2;
+    switchPossession(25);
+    return;
+  }
+
+  const gained = newOffYard - state.ballYard;
+  state.ballYard = newOffYard;
+  state.toGo -= gained;
+
+  if (state.toGo <= 0) {
+    state.down = 1;
+    state.toGo = Math.min(10, 100 - state.ballYard);
+    triggerBanner(`FIRST DOWN! (+${gained} YDS)`);
+  } else {
+    state.down++;
+    if (state.down > 4) {
+      triggerBanner('TURNOVER ON DOWNS!');
+      switchPossession(100 - state.ballYard);
+      return;
+    } else {
+      triggerBanner(`${gained >= 0 ? '+'+gained : gained} YDS`);
+    }
+  }
+  setupPreSnap();
+}
+
+function updateLoop() {
+  if (state.bannerTimer > 0) state.bannerTimer--;
+
+  if (state.phase === 'presnap' && state.cpuSnapTimer > 0) {
+    state.cpuSnapTimer--;
+    if (state.cpuSnapTimer === 0) snapBall();
+  }
+
+  if (state.phase === 'play') {
+    state.clock -= 1 / 60;
+    if (state.clock <= 0) {
+      if (state.quarter < 4) {
+        state.quarter++;
+        state.clock = 90;
+        triggerBanner(`END OF QUARTER ${state.quarter - 1}`);
+        setupPreSnap();
+        return;
+      } else {
+        state.phase = 'gameover';
+        updateHUD();
+        const winner = state.homeScore >= state.awayScore ? state.homeTeam : state.awayTeam;
+        triggerBanner(`FINAL: ${state.awayTeam.short} ${state.awayScore} - ${state.homeTeam.short} ${state.homeScore}`);
+        if (state.gameMode === 'bracket') {
+          setTimeout(() => advanceBracket(winner), 2000);
+        }
+        return;
+      }
+    }
+    updateHUD();
+
+    const dir = state.possession === 'home' ? 1 : -1;
+    const carrier = state.players.find(p => p.hasBall);
+
+    [2, 3, 4].forEach((idx, rNum) => {
+      const wr = state.players[idx];
+      if (!wr.hasBall) {
+        wr.x += wr.speed * dir;
+        if (state.selectedPlay.id === 'pass_slant') wr.y += (rNum === 0 ? 1.1 : -1.1);
+        if (state.selectedPlay.id === 'pass_post' && rNum === 0) wr.y += 0.9;
+      }
+    });
+
+    if (carrier) {
+      if (isUserOffense()) {
+        if (state.keys['ArrowUp'] || state.keys['w']) carrier.y -= carrier.speed;
+        if (state.keys['ArrowDown'] || state.keys['s']) carrier.y += carrier.speed;
+        if (state.keys['ArrowLeft'] || state.keys['a']) carrier.x -= carrier.speed;
+        if (state.keys['ArrowRight'] || state.keys['d']) carrier.x += carrier.speed;
+      } else {
+        carrier.x += carrier.speed * dir;
+        if (carrier.role === 'QB' && Math.random() < 0.025 && !state.ball.inAir) {
+          const rec = state.players[2 + Math.floor(Math.random()*3)];
+          carrier.hasBall = false;
+          state.ball = { inAir: true, targetIdx: state.players.indexOf(rec), progress: 0, startX: carrier.x, startY: carrier.y, endX: rec.x + 25*dir, endY: rec.y };
+        }
+      }
+      carrier.y = Math.max(20, Math.min(480, carrier.y));
+      carrier.x = Math.max(20, Math.min(1080, carrier.x));
+
+      if ((dir === 1 && carrier.x >= 1000) || (dir === -1 && carrier.x <= 100)) {
+        endPlayAtX(carrier.x);
+        return;
+      }
+    }
+
+    if (state.ball.inAir) {
+      state.ball.progress += 0.045;
+      const target = state.players[state.ball.targetIdx];
+      target.x += (state.ball.endX - target.x) * 0.08;
+      target.y += (state.ball.endY - target.y) * 0.08;
+      if (state.ball.progress >= 1) {
+        state.ball.inAir = false;
+        const nearbyDef = state.players.find(p => !p.isOff && Math.hypot(p.x - target.x, p.y - target.y) < 16);
+        if (nearbyDef && Math.random() < 0.28) {
+          triggerBanner('INTERCEPTED!');
+          switchPossession(100 - state.ballYard);
+          return;
+        } else if (Math.random() < 0.85) {
+          target.hasBall = true;
+        } else {
+          triggerBanner('INCOMPLETE PASS');
+          state.down++;
+          if (state.down > 4) { triggerBanner('TURNOVER ON DOWNS!'); switchPossession(100 - state.ballYard); }
+          else setupPreSnap();
+          return;
+        }
+      }
+    }
+
+    state.players.forEach((p, idx) => {
+      if (p.isOff) return;
+      if (isUserDefense() && idx === 6) {
+        if (state.keys['ArrowUp'] || state.keys['w']) p.y -= p.speed * 1.1;
+        if (state.keys['ArrowDown'] || state.keys['s']) p.y += p.speed * 1.1;
+        if (state.keys['ArrowLeft'] || state.keys['a']) p.x -= p.speed * 1.1;
+        if (state.keys['ArrowRight'] || state.keys['d']) p.x += p.speed * 1.1;
+      } else {
+        const target = carrier || state.players[state.ball.targetIdx];
+        if (target) {
+          const angle = Math.atan2(target.y - p.y, target.x - p.x);
+          p.x += Math.cos(angle) * p.speed * 0.92;
+          p.y += Math.sin(angle) * p.speed * 0.92;
+        }
+      }
+
+      if (carrier && Math.hypot(p.x - carrier.x, p.y - carrier.y) < 18) {
+        endPlayAtX(carrier.x);
+      }
+    });
+  }
+}
+
+function drawField() {
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#15803d' : '#166534';
+    ctx.fillRect(100 + i * 90, 0, 90, 500);
+  }
+
+  ctx.fillStyle = state.homeTeam.c1;
+  ctx.fillRect(0, 0, 100, 500);
+  ctx.fillStyle = state.awayTeam.c1;
+  ctx.fillRect(1000, 0, 100, 500);
+
+  ctx.save();
+  ctx.translate(50, 250);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = state.homeTeam.c2;
+  ctx.font = '900 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.homeTeam.short, 0, 10);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(1050, 250);
+  ctx.rotate(Math.PI / 2);
+  ctx.fillStyle = state.awayTeam.c2;
+  ctx.font = '900 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.awayTeam.short, 0, 10);
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+  ctx.lineWidth = 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  for (let y = 0; y <= 100; y += 10) {
+    const x = yardToX(y);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 500); ctx.stroke();
+    if (y > 0 && y < 100) {
+      const label = y <= 50 ? y : 100 - y;
+      ctx.fillText(label, x, 35);
+      ctx.fillText(label, x, 480);
+    }
+  }
+
+  const dir = state.possession === 'home' ? 1 : -1;
+  const fieldYard = state.possession === 'home' ? state.ballYard : (100 - state.ballYard);
+  const losX = yardToX(fieldYard);
+  const fdX = yardToX(Math.max(0, Math.min(100, fieldYard + state.toGo * dir)));
+
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(losX, 0); ctx.lineTo(losX, 500); ctx.stroke();
+
+  ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(fdX, 0); ctx.lineTo(fdX, 500); ctx.stroke();
+
+  state.players.forEach((p, idx) => {
+    const isControlled = (isUserOffense() && p.hasBall) || (isUserDefense() && idx === 6);
+    if (isControlled) {
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 17, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    ctx.fillStyle = p.team.c1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = p.team.c2; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.num, p.x, p.y + 4);
+
+    if (state.phase === 'play' && isUserOffense() && state.players[0].hasBall && idx >= 2 && idx <= 4) {
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(p.x - 9, p.y - 28, 18, 14);
+      ctx.fillStyle = '#000';
+      ctx.fillText(idx - 1, p.x, p.y - 17);
+    }
+
+    if (p.hasBall) {
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath(); ctx.ellipse(p.x + 8, p.y - 6, 6, 4, 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+
+  if (state.ball.inAir) {
+    const bx = state.ball.startX + (state.ball.endX - state.ball.startX) * state.ball.progress;
+    const by = state.ball.startY + (state.ball.endY - state.ball.startY) * state.ball.progress - Math.sin(state.ball.progress * Math.PI) * 35;
+    ctx.fillStyle = '#92400e';
+    ctx.beginPath(); ctx.ellipse(bx, by, 7, 4.5, 0.3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  if (state.bannerTimer > 0) {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(250, 210, 600, 80);
+    ctx.strokeStyle = '#eab308'; ctx.lineWidth = 3;
+    ctx.strokeRect(250, 210, 600, 80);
+    ctx.fillStyle = '#facc15';
+    ctx.font = '900 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.bannerMsg, 550, 258);
+  }
+}
+
+function gameLoop() {
+  if (!document.getElementById('screen-game').classList.contains('hidden')) {
+    updateLoop();
+    drawField();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('keydown', e => {
+  state.keys[e.key] = true;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (state.phase === 'presnap') snapBall();
+  }
+  if (e.key === '1') throwPass(0);
+  if (e.key === '2') throwPass(1);
+  if (e.key === '3') throwPass(2);
+});
+window.addEventListener('keyup', e => state.keys[e.key] = false);
+
+renderTeamSelection();
+gameLoop();
+</script>
+</body>
+</html>
